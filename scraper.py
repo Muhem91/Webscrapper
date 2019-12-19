@@ -11,8 +11,9 @@ from bs4 import BeautifulSoup
 import json
 
 
-#Profile:
-#repräsentiert ein Instagram Profil mit Anzeigename,Username und Profilfoto
+
+# Profile:
+# repräsentiert ein Instagram Profil mit Anzeigename,Username und Profilfoto
 class Profile:
     def __init__(self, instaUserData):
         self.id = instaUserData['id']
@@ -30,9 +31,10 @@ class Profile:
     def __repr__(self) -> str:
         return json.dumps(self.to_obj())
 
-#Media:
-#repräsentiert ein Instagram-Media, Foto oder Video
-#speichert Titel,Picturepath,Picture source und einen alternativen Text, welches von Instagram erstellt wird
+
+# Media:
+# repräsentiert ein Instagram-Media, Foto oder Video
+# speichert Titel,Picturepath,Picture source und einen alternativen Text, welches von Instagram erstellt wird
 class Media:
     def __init__(self, media_node):
         self.pictureUrl = 'https://www.instagram.com/p/%s/'
@@ -62,8 +64,9 @@ class Media:
     def __repr__(self) -> str:
         return json.dumps(self.to_obj())
 
-#InstagramImageScraper:
-#liefert die nötigen Methoden um eine json mit den Media Links zu einen bestimmten Usernamen zu liefern
+
+# InstagramImageScraper:
+# liefert die nötigen Methoden um eine json mit den Media Links zu einen bestimmten Usernamen zu liefern
 class InstagramImageScraper:
 
     def __init__(self):
@@ -85,7 +88,7 @@ class InstagramImageScraper:
         html = urllib.request.urlopen(url, context=self.ctx).read().decode("utf-8", "ignore")
         soup = BeautifulSoup(html, 'html.parser')
         script = soup.find('script', text=lambda t:
-            t.startswith('window._sharedData'))
+        t.startswith('window._sharedData'))
 
         return script
 
@@ -100,7 +103,7 @@ class InstagramImageScraper:
         else:
             print('No Data found')
 
-    #das Objekt was in die json später geschrieben wird
+    # das Objekt was in die json später geschrieben wird
     def download_profil_pictures_in_file(self, username):
         data = {
             'profile': {},
@@ -112,14 +115,13 @@ class InstagramImageScraper:
         script = self.get_shared_data(url)
 
         if script:
-            #erstellt eine json aus dem window._sharedData
+            # erstellt eine json aus dem window._sharedData
             page_json = script.text.split(' = ', 1)[1].rstrip(';')
             page_data = json.loads(page_json)
-            #die userData aus dem json werden als Profil gespeichert
+            # die userData aus dem json werden als Profil gespeichert
             userData = page_data['entry_data']['ProfilePage'][0]['graphql']['user']
             profile = Profile(userData)
             data['profile'] = profile.to_obj()
-
 
             timeline_media = userData['edge_owner_to_timeline_media']
             total_media = timeline_media['count']
@@ -128,7 +130,7 @@ class InstagramImageScraper:
 
             data['total'] = total_media
 
-            #ließt die Bilder der Webseite ein
+            # ließt die Bilder der Webseite ein
             for i, media_edge in enumerate(timeline_media['edges'], start=1):
                 print('\rProcess: %d von %d' % (i, total_media), end='')
                 try:
@@ -137,10 +139,10 @@ class InstagramImageScraper:
                 except Exception as e:
                     print(" --> Fehler aufgetreten.")
 
-            #solange es weitere Bilder gibt,ließ sie ein
+            # solange es weitere Bilder gibt,ließ sie ein
             while has_next_page:
-                #weitere Bilder über die graphQl Schnittstelle abgerufen
-                #Media hash wird übergeben und Variable mit letzten hash
+                # weitere Bilder über die graphQl Schnittstelle abgerufen
+                # Media hash wird übergeben und Variable mit letzten hash
                 try:
 
                     new_variables = urllib.parse.quote_plus(self.media_variables % (profile.id, end_cursor))
@@ -149,8 +151,9 @@ class InstagramImageScraper:
                     media_response = urllib.request.urlopen(new_url, context=self.ctx).read().decode("utf-8")
                     media_json = json.loads(media_response)
 
-                    has_next_page =  media_json['data']['user']['edge_owner_to_timeline_media']['page_info']['has_next_page']
-                    end_cursor =  media_json['data']['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
+                    has_next_page = media_json['data']['user']['edge_owner_to_timeline_media']['page_info'][
+                        'has_next_page']
+                    end_cursor = media_json['data']['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
 
                     edges = media_json['data']['user']['edge_owner_to_timeline_media']['edges']
                     current_size = len(data['media'])
@@ -168,7 +171,7 @@ class InstagramImageScraper:
         else:
             print('No Data found')
 
-        #wenn fertig, dann erstelle json
+        # wenn fertig, dann erstelle json
         print()
         filename = './dist/%s.json' % username
 
@@ -211,4 +214,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
-

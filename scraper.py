@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 import json
 
 
+#Profile:
+#repräsentiert ein Instagram Profil mit Anzeigename,Username und Profilfoto
 class Profile:
     def __init__(self, instaUserData):
         self.id = instaUserData['id']
@@ -28,7 +30,9 @@ class Profile:
     def __repr__(self) -> str:
         return json.dumps(self.to_obj())
 
-
+#Media:
+#repräsentiert ein Instagram-Media, Foto oder Video
+#speichert Titel,Picturepath,Picture source und einen alternativen Text, welches von Instagram erstellt wird
 class Media:
     def __init__(self, media_node):
         self.pictureUrl = 'https://www.instagram.com/p/%s/'
@@ -58,7 +62,8 @@ class Media:
     def __repr__(self) -> str:
         return json.dumps(self.to_obj())
 
-
+#InstagramImageScraper:
+#liefert die nötigen Methoden um eine json mit den Media Links zu einen bestimmten Usernamen zu liefern
 class InstagramImageScraper:
 
     def __init__(self):
@@ -95,6 +100,7 @@ class InstagramImageScraper:
         else:
             print('No Data found')
 
+    #das Objekt was in die json später geschrieben wird
     def download_profil_pictures_in_file(self, username):
         data = {
             'profile': {},
@@ -104,12 +110,16 @@ class InstagramImageScraper:
 
         url = self.profilUrl % username
         script = self.get_shared_data(url)
+
         if script:
+            #erstellt eine json aus dem window._sharedData
             page_json = script.text.split(' = ', 1)[1].rstrip(';')
             page_data = json.loads(page_json)
+            #die userData aus dem json werden als Profil gespeichert
             userData = page_data['entry_data']['ProfilePage'][0]['graphql']['user']
             profile = Profile(userData)
             data['profile'] = profile.to_obj()
+
 
             timeline_media = userData['edge_owner_to_timeline_media']
             total_media = timeline_media['count']
@@ -118,6 +128,7 @@ class InstagramImageScraper:
 
             data['total'] = total_media
 
+            #ließt die Bilder der Webseite ein
             for i, media_edge in enumerate(timeline_media['edges'], start=1):
                 print('\rProcess: %d von %d' % (i, total_media), end='')
                 try:
@@ -126,10 +137,12 @@ class InstagramImageScraper:
                 except Exception as e:
                     print(" --> Fehler aufgetreten.")
 
+            #solange es weitere Bilder gibt,ließ sie ein
             while has_next_page:
+                #weitere Bilder über die graphQl Schnittstelle abgerufen
+                #Media hash wird übergeben und Variable mit letzten hash
                 try:
-                    # warte eine sekunde um kein 429 zu erhalten
-                    # time.sleep(1)
+
                     new_variables = urllib.parse.quote_plus(self.media_variables % (profile.id, end_cursor))
                     new_url = self.graph_ql_url % (self.media_query_hash, new_variables)
                     print('\nLoading next page ...')
@@ -141,30 +154,27 @@ class InstagramImageScraper:
 
                     edges = media_json['data']['user']['edge_owner_to_timeline_media']['edges']
                     current_size = len(data['media'])
+
                     for i, media_edge in enumerate(edges, start=1):
                         print('\rProcess: %d von %d' % (current_size + i, total_media), end='')
                         try:
                             picture = Media(media_edge['node'])
                             data['media'].append(picture.to_obj())
                         except Exception as e:
-                            print(" --> Fehler aufgetreten.")
+                            print(" --> An error has occurred.")
                 except Exception as ee:
-                    # print(ee)
-                    # eingabe = input('Es ist ein Fehler aufgetreten. Nochmal versuchen (und 10 sekunden warten) (y,n)')
-                    # if eingabe not in ['y', 'Y']:
-                    #     has_next_page = False
-                    # else :
-                    #    time.sleep(10)
+
                     has_next_page = False
         else:
             print('No Data found')
 
+        #wenn fertig, dann erstelle json
         print()
         filename = './dist/%s.json' % username
 
         with open(filename, 'w') as outfile:
             json.dump(data, outfile, indent=4)
-        print('%s erstellt.' % filename)
+        print('%s created.' % filename)
 
 
 def main(argv):
@@ -176,18 +186,18 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, 'hp:d:t:', ['profile=', 'download=', 'hashtag='])
     except getopt.GetoptError:
-        print('Es ist ein Fehler aufgetreten. Versuchen Sie es später erneut oder wenden Sie sich an den Admin.')
+        print('An error has occurred. Try again later or conact the admin.')
         sys.exit(2)
 
     if len(args) + len(opts) == 0:
-        print('Fehlerhafter Aufruf. Tippe -h für Hilfe:')
+        print('Incorrect call. Press -h for help:')
         print('scraper_version1.py -h')
         sys.exit(1)
 
     for opt, arg in opts:
         if opt == '-h':
-            print('Wenn Sie das Profil eines Benutzers sehen wollen, dann geben Sie -p <username> ein.')
-            print('Um alle Bilder eines Profils in eine json zu speichern, geben Sie -d <username> ein.')
+            print('If you want to see a userprofile, than enter -p <username> .')
+            print(' If you want to save all pictures from a profile in a json, than enter -d <username>.')
             print('z.B. scraper_version1.py -d <username>')
             sys.exit()
         elif opt in ('-p', '--profile'):

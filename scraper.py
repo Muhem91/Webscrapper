@@ -10,12 +10,8 @@ import urllib.error
 from bs4 import BeautifulSoup
 import json
 
-
-
-
-
-# Profile:
-# repräsentiert ein Instagram Profil mit Anzeigename,Username und Profilfoto
+#Profile:
+#repräsentiert ein Instagram Profil mit Anzeigename, Username und Profilfoto
 class Profile:
     def __init__(self, instaUserData):
         self.id = instaUserData['id']
@@ -33,10 +29,10 @@ class Profile:
     def __repr__(self) -> str:
         return json.dumps(self.to_obj())
 
-
-# Media:
-# repräsentiert ein Instagram-Media, Foto oder Video
-# speichert Titel,Picturepath,Picture source und einen alternativen Text, welches von Instagram erstellt wird
+#Media:
+#repräsentiert ein Instgram Media, Picture oder Video
+#speichert Titel, Picture, Picture Source und einen alternative Text
+#welches von Instgram erstellt wird
 class Media:
     def __init__(self, media_node):
         self.pictureUrl = 'https://www.instagram.com/p/%s/'
@@ -66,9 +62,8 @@ class Media:
     def __repr__(self) -> str:
         return json.dumps(self.to_obj())
 
-
-# InstagramImageScraper:
-# liefert die nötigen Methoden um eine json mit den Media Links zu einen bestimmten Usernamen zu liefern
+# InstgramImageScraper:
+#liefert die nötigen Methoden um eine json mit den Media Links zu bestimmten Username zu liefern
 class InstagramImageScraper:
 
     def __init__(self):
@@ -76,6 +71,7 @@ class InstagramImageScraper:
         self.ctx.check_hostname = False
         self.ctx.verify_mode = ssl.CERT_NONE
         self.debug = False
+
 
         self.hashtagUrl = 'https://www.instagram.com/explore/tags/%s/'
         self.profilUrl = 'https://www.instagram.com/%s/'
@@ -90,7 +86,7 @@ class InstagramImageScraper:
         html = urllib.request.urlopen(url, context=self.ctx).read().decode("utf-8", "ignore")
         soup = BeautifulSoup(html, 'html.parser')
         script = soup.find('script', text=lambda t:
-        t.startswith('window._sharedData'))
+            t.startswith('window._sharedData'))
 
         return script
 
@@ -105,7 +101,7 @@ class InstagramImageScraper:
         else:
             print('No Data found')
 
-    # das Objekt was in die json später geschrieben wird
+    #Objekt was in die json später geschrieben wird
     def download_profil_pictures_in_file(self, username):
         data = {
             'profile': {},
@@ -115,12 +111,11 @@ class InstagramImageScraper:
 
         url = self.profilUrl % username
         script = self.get_shared_data(url)
-
         if script:
-            # erstellt eine json aus dem window._sharedData
+            #erstellt eine json aus dem window._sharedData
             page_json = script.text.split(' = ', 1)[1].rstrip(';')
             page_data = json.loads(page_json)
-            # die userData aus dem json werden als Profil gespeichert
+            #die userData us dem json werden als Profil gespeichert
             userData = page_data['entry_data']['ProfilePage'][0]['graphql']['user']
             profile = Profile(userData)
             data['profile'] = profile.to_obj()
@@ -132,19 +127,19 @@ class InstagramImageScraper:
 
             data['total'] = total_media
 
-            # ließt die Bilder der Webseite ein
+            #liest die Bilder aus der Webseite ein
             for i, media_edge in enumerate(timeline_media['edges'], start=1):
                 print('\rProcess: %d von %d' % (i, total_media), end='')
                 try:
                     picture = Media(media_edge['node'])
                     data['media'].append(picture.to_obj())
                 except Exception as e:
-                    print(" --> Fehler aufgetreten.")
+                    print(" --> Error occurred.")
 
-            # solange es weitere Bilder gibt,ließ sie ein
+            #solange Bilder gelesen werden next page
             while has_next_page:
-                # weitere Bilder über die graphQl Schnittstelle abgerufen
-                # Media hash wird übergeben und Variable mit letzten hash
+
+                #Bilder werden über Schittstelle graphQL abgerufen, dazu Media hash und Variable übergeben
                 try:
 
                     new_variables = urllib.parse.quote_plus(self.media_variables % (profile.id, end_cursor))
@@ -153,27 +148,24 @@ class InstagramImageScraper:
                     media_response = urllib.request.urlopen(new_url, context=self.ctx).read().decode("utf-8")
                     media_json = json.loads(media_response)
 
-                    has_next_page = media_json['data']['user']['edge_owner_to_timeline_media']['page_info'][
-                        'has_next_page']
-                    end_cursor = media_json['data']['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
+                    has_next_page =  media_json['data']['user']['edge_owner_to_timeline_media']['page_info']['has_next_page']
+                    end_cursor =  media_json['data']['user']['edge_owner_to_timeline_media']['page_info']['end_cursor']
 
                     edges = media_json['data']['user']['edge_owner_to_timeline_media']['edges']
                     current_size = len(data['media'])
-
                     for i, media_edge in enumerate(edges, start=1):
                         print('\rProcess: %d von %d' % (current_size + i, total_media), end='')
                         try:
                             picture = Media(media_edge['node'])
                             data['media'].append(picture.to_obj())
                         except Exception as e:
-                            print(" --> An error has occurred.")
+                            print(" --> Error occurred.")
                 except Exception as ee:
 
                     has_next_page = False
         else:
             print('No Data found')
-
-        # wenn fertig, dann erstelle json
+        #wenn fertig, erstelle json
         print()
         filename = './dist/%s.json' % username
 
@@ -191,18 +183,18 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, 'hp:d:t:', ['profile=', 'download=', 'hashtag='])
     except getopt.GetoptError:
-        print('An error has occurred. Try again later or conact the admin.')
+        print('An error has occurred. Try again later or contact the admin.')
         sys.exit(2)
 
     if len(args) + len(opts) == 0:
-        print('Incorrect call. Press -h for help:')
+        print('Incorrect call . Enter -h für help:')
         print('scraper_version1.py -h')
         sys.exit(1)
 
     for opt, arg in opts:
         if opt == '-h':
-            print('If you want to see a userprofile, than enter -p <username> .')
-            print(' If you want to save all pictures from a profile in a json, than enter -d <username>.')
+            print('If you want to see a profile form a user, than enter -p <username>.')
+            print('If you want to save all pictures form profils in a json, enter -d <username>.')
             print('z.B. scraper_version1.py -d <username>')
             sys.exit()
         elif opt in ('-p', '--profile'):
@@ -216,3 +208,4 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv[1:])
+
